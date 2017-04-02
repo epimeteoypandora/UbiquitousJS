@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CVRP Problem</title>
+    <!--<meta name="viewport" content="width=200px, initial-scale=1, maximum-scale=1"/>-->
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1"/>
+    <link rel="stylesheet" href="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css">
+    <link rel="stylesheet" type="text/css" href="map.css">    
+    <script src="http://code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script src="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script>  
+
+ 
+    
+
+<!--<script 
+        src="https://maps.googleapis.com/maps/api/js?litemode=true&key=AIzaSyAD0MlisrN4C7MiUFkSa9yhC7psXASYNk0&signed_in=true&callback=initMap"></script>-->
+    <script async defer
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAD0MlisrN4C7MiUFkSa9yhC7psXASYNk0&callback=initMap">
+    </script>
+    <script type="text/javascript" src="map.js"></script>   	
+	
+    
+    
+    <script src="bundle.js"></script>   
+    <script src="https://cdn.socket.io/socket.io-1.4.8.js"></script>
+    <script>	           
+        var running=false;
+        class console{
+                constructor() {
+
+                }     
+                static log(str){
+                    $('#messages').prepend($('<li>').text(str));
+                }
+        }          
+        function showMarkersSolution(){
+            var newMap=createNewMap(markers[0].getPosition());
+            setMapOnAll(newMap);
+            centerMapOnMarkers(markers,newMap);
+            updateDataOfInterestSolution(markers.length);  
+        }
+        
+        function setCreateMenuPage(){       
+               $('.show_solution_menu').hide();
+               $('.create_problem_menu').show();
+               $("#ul_solutions_list").empty()
+               deleteAllMarkersFromListAndMap();
+               updateMarkerCounter();
+               initMap();
+               startedProblem=false;        
+               $.mobile.pageContainer.pagecontainer("change", "#map_page", null);       
+        }
+        
+
+        
+
+var connectionOptions =  {
+    "upgrade" : false,
+    'forceNew':true,
+    'allowUpgrades':false,
+'pingInterval': 45000,
+'pingTimeOut': 45000,
+
+    "force new connection" : true,
+    "reconnection": true,
+    "reconnectionDelay": 2000,                  //starts with 2 secs delay, then 4, 6, 8, until 60 where it stays forever until it reconnects
+    "reconnectionDelayMax" : 60000,             //1 minute maximum delay between connections
+    "reconnectionAttempts": "Infinity",         //to prevent dead clients, having the user to having to manually reconnect after a server restart.
+    "timeout" : 10000,                           //before connect_error and connect_timeout are emitted.
+    "transports" : ["websocket"]                //forces the transport to be only websocket. Server needs to be setup as well/
+}
+
+            //var socket =io.connect("http://192.168.1.2:3000",{'force new connection': true, transports: ['websocket'], upgrade: false});
+            //var socket =io.connect("http://192.168.0.103:3000",connectionOptions);           
+            var socket =io.connect("http://35.184.96.63:3000",connectionOptions);
+        var transmissionsLayer = new Common.Elements.WebSocketClient(socket);           
+        var communicationLayer = new Common.Elements.SlaveCommunication();
+        var applicationLayer = new Common.Elements.SlaveApplication();
+
+        communicationLayer.initialize(applicationLayer,transmissionsLayer);
+
+        transmissionsLayer.initialize(communicationLayer,socket);
+
+        applicationLayer.initialize(communicationLayer);
+        
+        window.applicationLayer=applicationLayer;
+//        applicationLayer.loadCVRPProblemFromFile(Common.Constants.FileName);         
+    </script>    
+    
+    
+    
+    <script>
+
+
+
+	
+	initMap();
+        
+        
+
+    </script> 
+
+	
+	<script>
+	
+             
+ 
+ 
+ 
+ 
+	
+		function startAlgorithm(matrixCost){
+                
+			var maxSteps=$('#config_maximum_steps').val();
+			var popSize=$('#config_population_size').val();
+			var probMut=$('#config_mutation_probability').val();
+			var probCross=$('#config_cross_probability').val();
+			var probLS=$('#config_ls_probability').val();
+			var nTrucks=$('#config_trucks_number').val();
+			
+			var truckCapacity=$('#config_maximum_truck_capacity').val();
+			var truckTime=$('#config_maximum_truck_time').val();
+			var penalCap=$('#config_penalty_capacity').val();
+			var penalTime=$('#config_penalty_time').val();
+			var targetFitness=$('#config_target_fitness').val();		
+                        
+			var arrayCustomers=[]; //ARRAY DE CUSTOMERS
+                        
+			for (var i=0;i<markers.length-1;i++){ //TODO ->el almacén no tiene datos
+				//var deliveryItems=$('#location_items').val();
+                                var deliveryItems=$( '#li_marker_data_'+i ).find( ".span_location_items_value" ).html();
+                                var deliveryTime=$( '#li_marker_data_'+i ).find( ".span_location_time_value" ).html();    
+				//var deliveryTime=$('#location_time').val();
+                                try {
+                                    deliveryItems=parseInt(deliveryItems);
+                                    deliveryTime=parseInt(deliveryTime);                                 
+                                } catch(e){
+                                    console.log(e.message);
+                                    console.log(e.stack);
+                                    deliveryItems=0;
+                                    deliveryTime=0;                                    
+                                }
+                                console.log("position="+i)
+                                console.log("deliveryItems="+deliveryItems)
+                               console.log("deliveryTime="+deliveryTime)                                
+				arrayCustomers.push(new Common.Elements.Customer(deliveryItems,deliveryTime));
+			}
+			targetFitness=parseInt(targetFitness)*(-1);
+			
+                        //GUARDAMOS LOS DATOS PARA LUEGO MOSTRAR EL RESULTADO
+                        lastStart["markers"]=markers;
+			lastStart["maxSteps"]=maxSteps;
+                        lastStart["popSize"]=popSize;
+                        lastStart["matrixCost"]=matrixCost;
+                        lastStart["arrayCustomers"]=arrayCustomers;
+                        lastStart["probMut"]=probMut;
+                        lastStart["probCross"]=probCross;
+                        lastStart["probLS"]=probLS;
+                        lastStart["nTrucks"]=nTrucks;
+                        lastStart["truckCapacity"]=truckCapacity;
+                        lastStart["truckTime"]=truckTime;
+                        lastStart["penalCap"]=penalCap;
+                        lastStart["penalTime"]=penalTime;
+                        lastStart["targetFitness"]=targetFitness;
+
+                        
+			applicationLayer.startCVRP3(maxSteps,popSize,matrixCost,arrayCustomers,probMut,probCross,probLS,nTrucks,truckCapacity,truckTime,penalCap,penalTime,targetFitness);
+//                        startedProblem=true;
+                        waitingStart=true;
+			$.mobile.pageContainer.pagecontainer("change", "#console_page", null);        
+		}
+	
+	</script>
+
+	
+	
+	
+<script type="text/javascript" src="solutions.js"></script>   	
+	
+	
+<script type="text/javascript" src="distanceMatrix.js"></script>   		
+	
+	
+<script type="text/javascript" src="htmlElements.js"></script>   	
+	
+	
+	
+
+
+<script>
+        var lastStart={};
+        var waitingStart=false;
+        var startedProblem=false;
+
+
+        var simulatedSolution=false;
+
+
+	
+
+	
+
+
+function deleteAllMarkersFromListAndMap(){
+    var id=null;
+    while (markers.length>0){
+            id=markers.length-1;
+            deleteMarker(id);
+            $('#marker_data_list li:last').remove();
+    }	
+//    console.log("quedan="+markers.length)    
+}
+
+function loadMarkerDataDetail(id,coordinates,items,time){	
+	$('#location_id').val(id);
+	$('#location_coordinates').html(coordinates);	
+//        alert("items "+items)
+	$('#location_items').val(items);
+//        alert("items "+$('#location_items').val())
+	$('#location_time').val(time);	
+}
+
+function loadMarkerDataList(id,items,time){
+	$("#li_marker_data_"+id+" .span_location_items_value").html(items);
+	$("#li_marker_data_"+id+" .span_location_time_value").html(time);
+        
+        updateMarkerData(markers[parseInt(id)+1],items,time);
+        
+	
+	//$('#marker_data_list').listview('refresh');	
+}
+
+
+function changeCustomerData(element,value){
+	var lastValue=element.val();
+	var newValue=parseInt(lastValue)+value;	
+	element.val(newValue);
+}
+
+
+
+
+function addMarkerToList(marker){
+	var coordinates=null;
+	var coordinates=marker.getPosition();
+
+	
+	var id =markers.length-2;
+	var li="";
+        if (id==-1){
+            li+='<li id="li_marker_data_'+id+'">';
+                li+='<a>';
+                li+='<span>ID: '+id+'</span><br/>';
+                li+='<span class="span_location_coordinates">'+coordinates.lat().toFixed(4)+", "+coordinates.lng().toFixed(4)+'</span><br/>';
+                li+='<span>Warehouse</span>';
+        } else {
+            li+='<li id="li_marker_data_'+id+'" class="li_marker_data">';
+                li+='<a href="#marker_data_detail_page">';
+                li+='<span>ID: '+id+'</span><br/>';               
+                li+='<span class="span_location_coordinates">'+coordinates.lat().toFixed(4)+", "+coordinates.lng().toFixed(4)+'</span><br/>';
+                li+='<div class="div_location_items"><span class="span_location_items">Items: </span><span class="span_location_items_value">'+$('#input_default_delivery_items').val()+'</span></div>';   
+                li+='<div class="div_location_time"><span class="span_location_items">Time: </span><span class="span_location_time_value">'+$('#input_default_delivery_time').val()+'</span></div>';
+        }
+            li+='</a>';		
+	li+="</li>";
+		   			
+	$('#marker_data_list').append(li).listview('refresh');	
+			console.log("son="+markers.length)
+	
+}
+
+
+</script>	
+	
+</head>
+<body id="bodycito">
+
+<div data-role="page" id="console_page">
+    <div data-role="content">
+                
+		<a data-mini="true" id="create_new_problem_button"  data-role="button" data-inline="true" data-theme="b">Create New Problem</a>
+		<a data-mini="true" id="stop_problem_button"  data-role="button" data-inline="true" data-theme="b">Stop</a>                
+<!--                <a data-mini="true" id="start_problem_from_file" data-role="button" data-inline="true">Load From File</a>-->
+                <ul id="messages"></ul>
+                <div class="ui-field-contain">
+			<div id="output"></div>
+			<textarea readonly data-mini="true" name="textarea_console" id="textarea_console"></textarea>
+		</div>
+		
+    </div>
+</div>
+
+
+<div data-role="page" id="map_page">
+
+    <div data-role="content" id="content">
+		<div id="map_canvas" style="height:100%"></div>
+    </div>
+                <a data-mini="true" id="back_to_console_button" href="#console_page"  data-role="button" data-inline="true" data-theme="b" data-icon="back" data-iconpos="notext">Back To Console</a>
+                
+                <a data-mini="true" style="display:none;"   class="show_solution_menu  ui-nodisc-icon  ui-alt-icon" id="show_solution_menu_button" href="#div_solutions_list" data-role="button" data-inline="true" data-icon="bullets" data-iconpos="notext">Show Routes</a>
+		<div style="display:none;"   class="show_solution_menu" data-role="panel" data-display="overlay" id="div_solutions_list">
+			<ul data-role="listview" id="ul_solutions_list">
+			</ul>						
+		</div>    
+                
+                
+                <input style="display:none;"  id="show_solution_fitness" value="">
+                <div id="map_data_of_interest"  >
+                    <p>Total Markers: <span id="data_of_interest_total_markers">0</span></p>   
+                    <p style="display:none;" class="show_solution_menu">Solution Fitness: <span id="data_of_interest_total_fitness" >-</span></p>                    
+                    <p style="display:none;" class="show_solution_menu">Markers in Route: <span id="data_of_interest_markers_in_route" >-</span></p>                    
+                </div>   
+               
+                
+		<div id="map_default_delivery_items" class="create_problem_menu">	                
+                    <a class="less_button ui-nodisc-icon  ui-alt-icon" data-corners="false" data-mini="true" data-role="button" data-inline="true" data-icon="minus" data-iconpos="notext">Minus</a>
+                    <a class="false_button ui-nodisc-icon ui-alt-icon" data-corners="false" data-mini="true"  data-role="button" data-inline="true" data-icon="shop" data-iconpos="notext" >Default Delivery Items</a>
+                    <a class="more_button ui-nodisc-icon  ui-alt-icon" data-corners="false" data-mini="true" data-role="button" data-inline="true" data-icon="plus" data-iconpos="notext">Plus</a>
+                    <input type="number" data-inline="true" data-mini="true" id="input_default_delivery_items" min="0" value="3" placeholder="items" >
+        	</div>    
+		<div id="map_default_delivery_time" class="create_problem_menu">	
+                    <a class="less_button ui-nodisc-icon ui-alt-icon" data-corners="false" data-mini="true" data-role="button" data-inline="true" data-icon="minus" data-iconpos="notext">Minus</a>
+                    <a class="false_button ui-nodisc-icon ui-alt-icon" data-corners="false" data-mini="true" data-role="button" data-inline="true" data-icon="clock" data-iconpos="notext">Default Delivery Time</a>
+                    <a class="more_button ui-nodisc-icon ui-alt-icon" data-corners="false" data-mini="true" data-role="button" data-inline="true" data-icon="plus" data-iconpos="notext">Plus</a>
+                    <input type="number" data-inline="true" data-mini="true"  id="input_default_delivery_time" min="0" value="5" placeholder="items" >      
+        	</div>                  
+                
+                
+		<a data-mini="true" class="create_problem_menu" id="show_marker_list_button" href="#div_marker_data_list" data-role="button" data-inline="true" data-icon="bullets" data-iconpos="notext">Show Marker List</a>
+		<a data-mini="true" class="create_problem_menu" id="configuration_button" href="#configuration_page" data-role="button" data-inline="true" data-icon="gear" 
+data-iconpos="notext">Configuration</a>
+		<a data-mini="true" class="create_problem_menu" id="start_button" data-role="button" data-inline="true" data-theme="b" data-icon="check" data-iconpos="notext">Start</a>
+		<a data-mini="true" class="create_problem_menu ui-nodisc-icon ui-alt-icon" id="delete_last_button" data-role="button" data-inline="true" data-icon="delete" data-iconpos="notext">Delete Last Marker</a>
+		<a data-mini="true" class="create_problem_menu ui-nodisc-icon" id="delete_all_button" data-role="button" data-inline="true" data-icon="delete" data-iconpos="notext">Delete All Markers</a>
+		<div class="create_problem_menu" data-role="panel" data-display="overlay" id="div_marker_data_list">
+			<ul data-role="listview" id="marker_data_list" data-split-icon="delete" data-split-theme="d">
+			</ul>						
+		</div> 
+</div>
+
+<div data-role="page" id="marker_data_detail_page">
+    <div data-role="content">
+		<a  data-mini="true" class="back_button" href="#map_page" id="back_from_marker_data_detail_page" data-role="button" data-inline="true" data-theme="b">Back</a>
+		<br/><br/><br/>
+                
+                
+                <h3 id="location_coordinates">123-456</h3>
+                <label for="location_id" class="">ID:</label>
+                <input  data-mini="true" readonly type="number" name="location_id" id="location_id" value="">
+		<br/><br/><br/>
+		<div>
+			<label for="location_items" class="">Expected Items:</label>
+			<input data-mini="true" type="number" name="location_items" id="location_items" min="0" value="10" placeholder="items" >
+			<a data-mini="true" class="less_button" data-role="button" data-inline="true" data-icon="minus">Less</a>
+			<a data-mini="true" class="more_button" data-role="button" data-inline="true" data-icon="plus" data-theme="b">More</a>			
+		</div>
+		<br/><br/><br/>
+		<div>
+			<label for="location_time" class="">Estimated Delivery Time:</label>
+			<input data-mini="true" type="number" name="location_time" id="location_time" min="0" value="10" placeholder="time" >
+			<a data-mini="true" class="less_button" data-role="button" data-inline="true" data-icon="minus">Less</a>
+			<a data-mini="true" class="more_button" data-role="button" data-inline="true" data-icon="plus" data-theme="b">More</a>			
+		</div>		
+	</div>
+</div>
+
+<div data-role="page" id="configuration_page">
+    <div data-role="content">
+		<a  data-mini="true" class="back_button" href="#map_page" data-role="button" data-inline="true" data-theme="b">Back</a>
+		<br/><br/><br/>
+		<div>
+			<label for="config_maximum_steps" class="">Maximum Steps:</label>
+			<input data-mini="true" type="number" name="config_maximum_steps" id="config_maximum_steps" value="500" min="20" placeholder="max steps" >
+			<a data-mini="true" class="less_button" data-role="button" data-inline="true" data-icon="minus">Less</a>
+			<a data-mini="true" class="more_button" data-role="button" data-inline="true" data-icon="plus" data-theme="b">More</a>			
+		</div>		
+		<br/><br/><br/>
+		<div>
+			<label for="config_population_size" class="">Population Size:</label>
+			<input data-mini="true" type="number" name="config_population_size" id="config_population_size" value="10" min="2" placeholder="population size" >
+			<a data-mini="true" class="less_button" data-role="button" data-inline="true" data-icon="minus">Less</a>
+			<a data-mini="true" class="more_button" data-role="button" data-inline="true" data-icon="plus" data-theme="b">More</a>			
+		</div>
+		<br/><br/><br/>		
+		<div>
+			<label for="config_mutation_probability" class="">Mutation Probability:</label>
+			<input data-mini="true" type="number" name="config_mutation_probability" id="config_mutation_probability" value="0.01" min="0" max="1" placeholder="mutation probability" >
+			<a data-mini="true" class="less_button_float" data-role="button" data-inline="true" data-icon="minus">Less</a>
+			<a data-mini="true" class="more_button_float" data-role="button" data-inline="true" data-icon="plus" data-theme="b">More</a>			
+		</div>
+		<br/><br/><br/>
+		<div>
+			<label for="config_cross_probability" class="">Cross Probability:</label>
+			<input data-mini="true" type="number" name="config_cross_probability" id="config_cross_probability" value="0.8" min="0" max="1" placeholder="cross probability" >
+			<a data-mini="true" class="less_button_float" data-role="button" data-inline="true" data-icon="minus">Less</a>
+			<a data-mini="true" class="more_button_float" data-role="button" data-inline="true" data-icon="plus" data-theme="b">More</a>			
+		</div>		
+		<br/><br/><br/>
+		<div>
+			<label for="config_ls_probability" class="">Local Search Probability:</label>
+			<input data-mini="true" type="number" name="config_ls_probability" id="config_ls_probability" value="0.1" min="0" max="1" placeholder="ls probability" >
+			<a data-mini="true" class="less_button_float" data-role="button" data-inline="true" data-icon="minus">Less</a>
+			<a data-mini="true" class="more_button_float" data-role="button" data-inline="true" data-icon="plus" data-theme="b">More</a>			
+		</div>			
+		<br/><br/><br/>		
+		<div>
+			<label for="config_trucks_number" class="">Trucks Number:</label>
+			<input data-mini="true" type="number" name="config_trucks_number" id="config_trucks_number" min="0" value="3" placeholder="trucks number" >
+			<a data-mini="true" class="less_button" data-role="button" data-inline="true" data-icon="minus">Less</a>
+			<a data-mini="true" class="more_button" data-role="button" data-inline="true" data-icon="plus" data-theme="b">More</a>			
+		</div>
+		<br/><br/><br/>
+		
+		<div>
+			<label for="config_maximum_truck_capacity" class="">Maximum Truck Capacity:</label>
+			<input data-mini="true" type="number" name="config_maximum_truck_capacity" id="config_maximum_truck_capacity" min="0"  value="30" placeholder="max capacity" >
+			<a data-mini="true" class="less_button" data-role="button" data-inline="true" data-icon="minus">Less</a>
+			<a data-mini="true" class="more_button" data-role="button" data-inline="true" data-icon="plus" data-theme="b">More</a>			
+		</div>
+		<br/><br/><br/>
+		<div>
+			<label for="config_maximum_truck_time" class="">Maximum Truck Time (hours):</label>
+			<input data-mini="true" type="number" name="config_maximum_truck_time" id="config_maximum_truck_time" min="0"  value="30" placeholder="max time" >
+			<a data-mini="true" class="less_button_float1" data-role="button" data-inline="true" data-icon="minus">Less</a>
+			<a data-mini="true" class="more_button_float1" data-role="button" data-inline="true" data-icon="plus" data-theme="b">More</a>	
+		</div>
+		<br/><br/><br/>
+		<div>
+			<label for="config_penalty_capacity" class="">Penalty Capacity:</label>
+			<input data-mini="true" type="number" name="config_penalty_capacity" id="config_penalty_capacity" min="0" value="1000" placeholder="penalty capacity" >
+			<a data-mini="true" class="less_button" data-role="button" data-inline="true" data-icon="minus">Less</a>
+			<a data-mini="true" class="more_button" data-role="button" data-inline="true" data-icon="plus" data-theme="b">More</a>	
+		</div>
+		<br/><br/><br/>
+		<div>
+			<label for="config_penalty_time" class="">Penalty Time:</label>
+			<input data-mini="true" type="number" name="config_penalty_time" id="config_penalty_time" min="0" value="1000" placeholder="penalty time in hours" >
+			<a data-mini="true" class="less_button" data-role="button" data-inline="true" data-icon="minus">Less</a>
+			<a data-mini="true" class="more_button" data-role="button" data-inline="true" data-icon="plus" data-theme="b">More</a>			
+		</div>
+		<br/><br/><br/>
+		<div>
+			<label for="config_target_fitness" class="">Target Fitness (less is better):</label>
+			<input data-mini="true" type="number" name="config_target_fitness" id="config_target_fitness" min="0" value="0" placeholder="target fitness" >
+			<a data-mini="true" class="less_button" data-role="button" data-inline="true" data-icon="minus">Less</a>
+			<a data-mini="true" class="more_button" data-role="button" data-inline="true" data-icon="plus" data-theme="b">More</a>		
+		</div>
+    </div>
+</div>
+
+
+
+
+</body>
+</html>

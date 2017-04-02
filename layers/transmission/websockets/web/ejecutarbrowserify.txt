@@ -1,0 +1,1 @@
+node_modules/.bin/browserify index.js > bundle.js

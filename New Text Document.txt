@@ -1,0 +1,11 @@
+{
+  "name": "UbiquitousJS",
+  "version": "0.3.0",
+  "dependencies": {
+    "express": "*",
+    "socket.io": "*"
+  },
+ "scripts" :{ 
+ 	"start" : "node start.js"
+  }
+}

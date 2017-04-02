@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CVRP Problem</title>
+    <!--<meta name="viewport" content="width=200px, initial-scale=1, maximum-scale=1"/>-->
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1"/>
+    <link rel="stylesheet" href="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css">
+    <link rel="stylesheet" type="text/css" href="map.css">    
+    <script src="http://code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script src="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script>  
+
+ 
+
+    
+    
+    <script src="bundle.js"></script>   
+    <script src="https://cdn.socket.io/socket.io-1.4.8.js"></script>
+    <script>	           
+        var running=false;
+        class console{
+                constructor() {
+
+                }     
+                static log(str){
+                   // $('#messages').prepend($('<li>').text(str));
+                }
+        }          
+        
+
+        Common.Constants.FromFile=true;
+        var communicationLayer = new Common.Elements.SlaveCommunication();
+        var applicationLayer = new Common.Elements.SlaveApplication();
+        applicationLayer.initialize(communicationLayer);
+
+        applicationLayer.loadCVRPProblemFromFile(Common.Constants.FileName,()=>{
+            console.log("Problem Loaded!")
+            //var socket = io();
+
+var connectionOptions =  {
+    "upgrade" : false,
+    'forceNew':true,
+    'allowUpgrades':false,
+'pingInterval': 45000,
+'pingTimeOut': 45000,
+
+    "force new connection" : true,
+    "reconnection": true,
+    "reconnectionDelay": 2000,                  //starts with 2 secs delay, then 4, 6, 8, until 60 where it stays forever until it reconnects
+    "reconnectionDelayMax" : 60000,             //1 minute maximum delay between connections
+    "reconnectionAttempts": "Infinity",         //to prevent dead clients, having the user to having to manually reconnect after a server restart.
+    "timeout" : 10000,                           //before connect_error and connect_timeout are emitted.
+    "transports" : ["websocket"]                //forces the transport to be only websocket. Server needs to be setup as well/
+}
+
+            //var socket =io.connect("http://192.168.1.2:3000",{'force new connection': true, transports: ['websocket'], upgrade: false});
+            //var socket =io.connect("http://192.168.0.103:3000",connectionOptions);           
+            var socket =io.connect("http://ec2-52-208-138-132.eu-west-1.compute.amazonaws.com:3000",connectionOptions);
+
+            var transmissionsLayer = new Common.Elements.WebSocketClient(socket);             
+            communicationLayer.initialize(applicationLayer,transmissionsLayer);
+
+            transmissionsLayer.initialize(communicationLayer,socket);
+
+            
+
+            window.applicationLayer=applicationLayer;            
+        });         
+    </script>    
+    
+    
+    
+		
+	
+	
+   	
+	
+	
+	
+
+
+<script>
+window.onload = function() {
+        $( "#start_problem_from_file" ).click(function() {
+            if (!running){
+                alert("Starting Problem From File!")
+                window.applicationLayer.startCVRPFromFile();                
+            } else {
+                alert("Sorry, you cannot start a new problem while it is one running.")
+            }
+
+        });    		
+};
+    
+    var lastStart={};
+        var waitingStart=false;
+        var startedProblem=false;
+
+
+        var simulatedSolution=false;
+
+
+	
+
+</script>	
+	
+</head>
+<body id="bodycito">
+
+<div data-role="page" id="console_page">
+    <div data-role="content">
+                <a data-mini="true" id="start_problem_from_file" data-role="button" data-inline="true">Start Problem From File</a>
+                <ul id="messages"></ul>
+                <div class="ui-field-contain">
+			<div id="output"></div>
+			<textarea readonly data-mini="true" name="textarea_console" id="textarea_console"></textarea>
+		</div>
+		
+    </div>
+</div>
+
+
+
+
+
+</body>
+</html>
